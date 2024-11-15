@@ -93,8 +93,8 @@ class FlappyBird {
         this.dpr = window.devicePixelRatio || 1;
         
         // 修改初始化顺序
-        this.init(true); // 先初始化游戏状态
-        this.setupCanvas(); // 再设置画布
+        this.setupCanvas(); // 先设置画布，获取游戏尺寸
+        this.init(true);    // 再初始化游戏状态
         this.setupEventListeners();
         
         // 添加窗口大小改变事件
@@ -112,8 +112,8 @@ class FlappyBird {
         
         // 小鸟属性
         this.bird = {
-            x: 60,
-            y: this.canvas.height / 2,
+            x: this.gameWidth * 0.2,
+            y: this.gameHeight / 2,
             width: 34,
             height: 24,
             gravity: 0.4,
@@ -127,21 +127,19 @@ class FlappyBird {
         // 管道属性
         this.pipes = [];
         this.pipeWidth = 52 / this.dpr;
-        this.pipeGap = 120;
-        this.pipeSpacing = 300;          // 增加管道间距
-        this.pipeSpeed = 3;              // 调整管道移动速度
-        
-        // 动画相关属性
-        this.birdFrame = 0;
-        this.birdAnimationSpeed = 0.15;
-        this.groundX = 0;
-        this.groundSpeed = 2;
-        this.lastTime = 0;
+        this.pipeGap = this.gameHeight * 0.25;        // 根据游戏高度设置间隙
+        this.pipeSpacing = this.gameWidth * 0.4;      // 根据游戏宽度设置间距
+        this.pipeSpeed = 3;
         
         // 管道难度相关属性
         this.initialPipeGap = this.gameHeight * 0.25;
         this.minPipeGap = this.gameHeight * 0.18;
         this.pipeGapDecrease = 0.002;
+        
+        // 动画相关属性
+        this.birdFrame = 0;
+        this.birdAnimationSpeed = 0.15;
+        this.lastTime = 0;
         
         // 只在首次初始化时加载图片和开始动画
         if (isFirstInit) {
@@ -152,7 +150,6 @@ class FlappyBird {
                     SVGGenerator.createBirdSVG('#FFD700')
                 ],
                 background: SVGGenerator.createBackgroundSVG(),
-                ground: SVGGenerator.createGroundSVG(),
                 pipeTop: SVGGenerator.createPipeSVG(true),
                 pipeBottom: SVGGenerator.createPipeSVG(false)
             });
@@ -217,6 +214,8 @@ class FlappyBird {
     startGame() {
         this.gameState = 'playing';
         this.startScreen.classList.add('hidden');
+        // 游戏开始时添加第一个管道
+        this.addPipe();
     }
 
     addPipe() {
@@ -282,9 +281,6 @@ class FlappyBird {
         const maxRotation = Math.PI / 4; // 45度
         this.bird.rotation = Math.max(-maxRotation, Math.min(maxRotation, targetRotation));
 
-        // 更新地面位置
-        this.groundX = (this.groundX - this.groundSpeed) % this.images.ground.width;
-
         // 更新管道位置
         this.pipes.forEach(pipe => {
             pipe.x -= this.pipeSpeed;
@@ -304,12 +300,11 @@ class FlappyBird {
 
         // 修改管道生成逻辑
         if (this.pipes.length === 0) {
-            // 第一个管道从屏幕右侧开始
             this.addPipe();
         } else {
             const lastPipe = this.pipes[this.pipes.length - 1];
-            // 当最后一个管道移动到一定距离后，添加新管道
-            if (this.gameWidth - (lastPipe.x + this.pipeWidth) >= this.pipeSpacing) {
+            // 当最后一个管道移动到离右边缘一定距离时，添加新管道
+            if (lastPipe.x < this.gameWidth - this.pipeSpacing) {
                 this.addPipe();
             }
         }
@@ -446,7 +441,6 @@ class FlappyBird {
 
         Promise.all(promises).then(() => {
             this.isResourcesLoaded = true;
-            this.groundHeight = this.images.ground?.height || 112;
             this.draw();
         });
     }
