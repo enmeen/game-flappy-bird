@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flappy Bird</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div class="start-screen">
+            <div class="game-title">Flappy Bird</div>
+            <div class="tap-tip">点击开始游戏</div>
+        </div>
+        <div class="game-over hidden">
+            <div class="score-board">
+                <div class="current">得分: <span id="score">0</span></div>
+                <div class="best">最高分: <span id="bestScore">0</span></div>
+            </div>
+            <button class="restart-btn">重新开始</button>
+        </div>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html> 
