@@ -2,6 +2,12 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    -webkit-user-select: none;  /* Safari */
+    -moz-user-select: none;     /* Firefox */
+    -ms-user-select: none;      /* IE/Edge */
+    user-select: none;          /* 标准语法 */
+    -webkit-tap-highlight-color: transparent;  /* 移动端点击高亮 */
+    outline: none;              /* 移除点击轮廓 */
 }
 
 body {
@@ -592,4 +598,36 @@ body {
         transform: scale(1);
         box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
+}
+
+/* 禁用按钮的点击效果 */
+button {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    outline: none !important;
+    user-select: none;
+}
+
+/* 禁用画布的选中效果 */
+canvas {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+/* 确保文本仍然可读但不可选 */
+.game-title,
+.tap-tip,
+.quiz-text,
+.quiz-question,
+.quiz-feedback,
+.game-over h2,
+.game-over p {
+    cursor: default;
+}
+
+/* 优化按钮点击效果 */
+.quiz-option:focus {
+    outline: none;
 } 

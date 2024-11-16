@@ -113,7 +113,8 @@ class FlappyBird {
             wrongAttempts: 0,     // 记录连续答错次数
             waitTime: 0,          // 答错后的等待时间
             cooldownTimer: null,   // 冷却时间定时器
-            correctStreak: 0    // 添加连续答对计数
+            correctStreak: 0,    // 添加连续答对计数
+            lastAnswerPosition: -1  // 记录上一次正确答案的位置
         };
         
         // 初始化音频上下文和音效
@@ -363,7 +364,7 @@ class FlappyBird {
                               birdLeft < pipe.x + this.pipeWidth &&
                               birdTop < pipe.topHeight;
 
-            // 检查与��管道的碰撞
+            // 检查与管道的碰撞
             const hitBottomPipe = birdRight > pipe.x && 
                                  birdLeft < pipe.x + this.pipeWidth &&
                                  birdBottom > pipe.topHeight + pipe.gapSize;
@@ -615,14 +616,16 @@ class FlappyBird {
     generateQuizOptions() {
         const answer = this.arithmeticQuiz.answer;
         
-        // 直接构建包含正确答案的选项数组
-        const options = [answer];
+        // 记录上一次正确答案的位置
+        if (!this.arithmeticQuiz.lastAnswerPosition) {
+            this.arithmeticQuiz.lastAnswerPosition = -1;  // 初始化
+        }
         
-        // 生成干扰项的范围（避免负数和过大的数）
+        // 生成干扰项的范围
         const minOption = Math.max(0, answer - 5);
         const maxOption = Math.min(20, answer + 5);
         
-        // 创建可选项池（排除正确答案）
+        // 创建可用选项池（排除正确答案）
         const availableOptions = [];
         for (let i = minOption; i <= maxOption; i++) {
             if (i !== answer) {
@@ -630,70 +633,106 @@ class FlappyBird {
             }
         }
         
-        // 随机选择3个干扰项
-        for (let i = 0; i < 3; i++) {
-            if (availableOptions.length > 0) {
-                // 从可用选项中随机选择
-                const randomIndex = Math.floor(Math.random() * availableOptions.length);
-                options.push(availableOptions[randomIndex]);
-                // 移除已选择的选项
-                availableOptions.splice(randomIndex, 1);
-            } else {
-                // 如果可用选项不足，生成新的干扰项
-                let newOption;
-                do {
-                    // 生成一个在合理范围内的随机数
-                    const offset = Math.floor(Math.random() * 5) + 1;
-                    newOption = answer + (Math.random() < 0.5 ? offset : -offset);
-                } while (
-                    newOption < 0 || 
-                    newOption > 20 || 
-                    options.includes(newOption) || 
-                    newOption === answer
-                );
-                options.push(newOption);
-            }
+        // 生成3个干扰项
+        const distractors = [];
+        while (distractors.length < 3 && availableOptions.length > 0) {
+            const randomIndex = Math.floor(Math.random() * availableOptions.length);
+            distractors.push(availableOptions[randomIndex]);
+            availableOptions.splice(randomIndex, 1);
         }
         
-        // 打乱选项顺序（Fisher-Yates 洗牌算法）
-        for (let i = options.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [options[i], options[j]] = [options[j], options[i]];
+        // 如果干扰项不足，补充生成
+        while (distractors.length < 3) {
+            let newOption;
+            do {
+                const offset = Math.floor(Math.random() * 5) + 1;
+                newOption = answer + (Math.random() < 0.5 ? offset : -offset);
+            } while (
+                newOption < 0 || 
+                newOption > 20 || 
+                distractors.includes(newOption) || 
+                newOption === answer
+            );
+            distractors.push(newOption);
         }
         
-        // 设置选项并进行验证
-        this.arithmeticQuiz.options = options;
+        // 确定正确答案的位置
+        let answerPosition;
+        do {
+            answerPosition = Math.floor(Math.random() * 4);
+        } while (answerPosition === this.arithmeticQuiz.lastAnswerPosition);
         
-        // 最终验证
-        if (!this.validateOptions(answer)) {
+        // 记录这次的位置
+        this.arithmeticQuiz.lastAnswerPosition = answerPosition;
+        
+        // 构建最终选项数组
+        const options = [...distractors];
+        options.splice(answerPosition, 0, answer);
+        
+        // 验证选项
+        if (!this.validateOptions(answer, options)) {
             console.error('选项生成失败，使用备用方案');
             this.generateFallbackOptions(answer);
+            return;
         }
-    }
-
-    // 添加选项验证方法
-    validateOptions(answer) {
-        const options = this.arithmeticQuiz.options;
-        return (
-            options.length === 4 &&
-            options.includes(answer) &&
-            options.every(opt => opt >= 0 && opt <= 20) &&
-            new Set(options).size === 4  // 确保没有重复选项
-        );
-    }
-
-    // 添加备用选项生成方法
-    generateFallbackOptions(answer) {
-        // 简单且可靠的备用方案
-        this.arithmeticQuiz.options = [
-            answer,
-            Math.max(0, answer - 2),
-            Math.min(20, answer + 2),
-            Math.max(0, Math.min(20, answer + (answer > 10 ? -3 : 3)))
-        ];
         
-        // 打乱顺序
-        this.arithmeticQuiz.options.sort(() => Math.random() - 0.5);
+        this.arithmeticQuiz.options = options;
+    }
+
+    // 验证选项
+    validateOptions(answer, options) {
+        // 基本验证
+        if (!options.includes(answer)) return false;
+        if (options.length !== 4) return false;
+        if (new Set(options).size !== 4) return false;
+        
+        // 验证所有选项是否在有效范围内
+        if (!options.every(opt => opt >= 0 && opt <= 20)) return false;
+        
+        // 验证选项之间的差异是否合理
+        const sortedOptions = [...options].sort((a, b) => a - b);
+        for (let i = 1; i < sortedOptions.length; i++) {
+            if (sortedOptions[i] - sortedOptions[i-1] === 0) return false;
+        }
+        
+        return true;
+    }
+
+    // 备用方案
+    generateFallbackOptions(answer) {
+        // 确保不与上次位置相同
+        let position;
+        do {
+            position = Math.floor(Math.random() * 4);
+        } while (position === this.arithmeticQuiz.lastAnswerPosition);
+        
+        // 生成基于答案的选项
+        const options = [];
+        const offsets = [-2, -1, 1, 2];
+        
+        // 打乱偏移量
+        offsets.sort(() => Math.random() - 0.5);
+        
+        // 生成选项
+        for (let offset of offsets) {
+            let option = answer + offset;
+            // 确保选项在有效范围内
+            option = Math.max(0, Math.min(20, option));
+            // 避免重复
+            while (options.includes(option)) {
+                option = option + (offset > 0 ? 1 : -1);
+                option = Math.max(0, Math.min(20, option));
+            }
+            options.push(option);
+        }
+        
+        // 在指定位置插入正确答案
+        options[position] = answer;
+        
+        // 记录位置
+        this.arithmeticQuiz.lastAnswerPosition = position;
+        
+        this.arithmeticQuiz.options = options;
     }
 
     // 更新算术题UI
