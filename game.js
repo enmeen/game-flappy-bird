@@ -363,7 +363,7 @@ class FlappyBird {
                               birdLeft < pipe.x + this.pipeWidth &&
                               birdTop < pipe.topHeight;
 
-            // 检查与下管道的碰撞
+            // 检查与��管道的碰撞
             const hitBottomPipe = birdRight > pipe.x && 
                                  birdLeft < pipe.x + this.pipeWidth &&
                                  birdBottom > pipe.topHeight + pipe.gapSize;
@@ -593,7 +593,7 @@ class FlappyBird {
         
         // 使用 setTimeout 确保 DOM 更新
         setTimeout(() => {
-            // 更新 UI
+            // 更新 UI（包含进度显示）
             this.updateQuizUI();
             
             // 移除隐藏类并添加动画类
@@ -702,6 +702,10 @@ class FlappyBird {
         const questionEl = quizContainer.querySelector('.quiz-question');
         const optionsEl = quizContainer.querySelector('.quiz-options');
         const feedbackEl = quizContainer.querySelector('.quiz-feedback');
+        const quizText = quizContainer.querySelector('.quiz-text');
+        
+        // 更新进度显示
+        quizText.textContent = `请回答: (${this.arithmeticQuiz.correctStreak + 1}/2)`;
         
         // 显示题目
         questionEl.textContent = this.arithmeticQuiz.question;
@@ -713,7 +717,6 @@ class FlappyBird {
             button.className = 'quiz-option';
             button.textContent = option;
             button.onclick = () => {
-                // 添加点击状态检查
                 if (!this.arithmeticQuiz.isProcessing && !button.disabled) {
                     this.checkAnswer(option);
                 }
@@ -779,55 +782,8 @@ class FlappyBird {
                     this.arithmeticQuiz.timer = null;
                     this.arithmeticQuiz.correctStreak = 0;
                 } else {
-                    // 未达到2题，直接更新下一题（类似错误答案的处理）
-                    // 生成新的题目内容
-                    const num1 = Math.floor(Math.random() * 10) + 1;
-                    const num2 = Math.floor(Math.random() * 10) + 1;
-                    const isAddition = Math.random() > 0.5;
-                    
-                    if (isAddition) {
-                        this.arithmeticQuiz.question = `${num1} + ${num2} = ?`;
-                        this.arithmeticQuiz.answer = num1 + num2;
-                    } else {
-                        const [larger, smaller] = [Math.max(num1, num2), Math.min(num1, num2)];
-                        this.arithmeticQuiz.question = `${larger} - ${smaller} = ?`;
-                        this.arithmeticQuiz.answer = larger - smaller;
-                    }
-                    
-                    // 生成新选项
-                    this.generateQuizOptions();
-                    
-                    // 直接更新 UI 内容
-                    const questionEl = quizContainer.querySelector('.quiz-question');
-                    const optionsEl = quizContainer.querySelector('.quiz-options');
-                    
-                    // 更新题目
-                    questionEl.textContent = this.arithmeticQuiz.question;
-                    
-                    // 更新选项
-                    optionsEl.innerHTML = '';
-                    this.arithmeticQuiz.options.forEach(option => {
-                        const button = document.createElement('button');
-                        button.className = 'quiz-option';
-                        button.textContent = option;
-                        button.onclick = () => {
-                            if (!this.arithmeticQuiz.isProcessing) {
-                                this.checkAnswer(option);
-                            }
-                        };
-                        optionsEl.appendChild(button);
-                    });
-                    
-                    // 隐藏反馈信息
-                    feedbackEl.className = 'quiz-feedback hidden';
-                    
-                    // 重置处理状态
-                    this.arithmeticQuiz.isProcessing = false;
-                    this.arithmeticQuiz.timer = null;
-                    
-                    // 更新题目提示，显示当前进度
-                    const quizText = document.querySelector('.quiz-text');
-                    quizText.textContent = `请回答: (${this.arithmeticQuiz.correctStreak + 1}/2)`;
+                    // 生成新题目并更新UI
+                    this.generateNewQuestion();
                 }
             }, 1000);
         } else {
@@ -856,34 +812,8 @@ class FlappyBird {
                 // 生成新选项
                 this.generateQuizOptions();
                 
-                // 直接更新 UI 内容
-                const questionEl = quizContainer.querySelector('.quiz-question');
-                const optionsEl = quizContainer.querySelector('.quiz-options');
-                
-                // 更新题目
-                questionEl.textContent = this.arithmeticQuiz.question;
-                
-                // 更新选项
-                optionsEl.innerHTML = '';
-                this.arithmeticQuiz.options.forEach(option => {
-                    const button = document.createElement('button');
-                    button.className = 'quiz-option';
-                    button.textContent = option;
-                    button.onclick = () => {
-                        if (!this.arithmeticQuiz.isProcessing) {
-                            this.checkAnswer(option);
-                        }
-                    };
-                    optionsEl.appendChild(button);
-                });
-                
-                // 隐藏反馈信息
-                feedbackEl.className = 'quiz-feedback hidden';
-                
-                // 重置处理状态
-                this.arithmeticQuiz.isProcessing = false;
-                this.arithmeticQuiz.timer = null;
-                
+                // 更新UI（这里会同时更新进度显示）
+                this.updateQuizUI();
             }, 1000);  // 1秒后更新新题目
         }
     }
@@ -991,6 +921,28 @@ class FlappyBird {
             // 启动音频
             source.start();
         }
+    }
+
+    // 添加新方法处理生成新题目
+    generateNewQuestion() {
+        const num1 = Math.floor(Math.random() * 10) + 1;
+        const num2 = Math.floor(Math.random() * 10) + 1;
+        const isAddition = Math.random() > 0.5;
+        
+        if (isAddition) {
+            this.arithmeticQuiz.question = `${num1} + ${num2} = ?`;
+            this.arithmeticQuiz.answer = num1 + num2;
+        } else {
+            const [larger, smaller] = [Math.max(num1, num2), Math.min(num1, num2)];
+            this.arithmeticQuiz.question = `${larger} - ${smaller} = ?`;
+            this.arithmeticQuiz.answer = larger - smaller;
+        }
+        
+        // 生成新选项
+        this.generateQuizOptions();
+        
+        // 更新UI（这里会同时更新进度显示）
+        this.updateQuizUI();
     }
 }
 
