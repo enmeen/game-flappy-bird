@@ -123,6 +123,9 @@ class FlappyBird {
         this.gameOverSound = null;  // 添加游戏结束音效
         this.createJumpSound();
         this.createGameOverSound();  // 创建游戏结束音效
+        
+        // 添加倒计时容器到 HTML
+        this.createCountdownElement();
     }
 
     init(isFirstInit = false) {
@@ -247,10 +250,17 @@ class FlappyBird {
     }
 
     startGame() {
-        this.gameState = 'playing';
+        // 先隐藏开始界面
         this.startScreen.classList.add('hidden');
-        // 游戏开始时添加第一个管道
-        this.addPipe();
+        
+        // 等待一帧确保开始界面已隐藏
+        requestAnimationFrame(() => {
+            // 显示倒计时
+            this.showCountdown().then(() => {
+                this.gameState = 'playing';
+                this.addPipe();
+            });
+        });
     }
 
     addPipe() {
@@ -329,7 +339,7 @@ class FlappyBird {
             }
         });
 
-        // 移除超出屏幕的管道
+        // 移除超出屏幕管道
         if (this.pipes[0] && this.pipes[0].x + this.pipeWidth < 0) {
             this.pipes.shift();
         }
@@ -799,27 +809,28 @@ class FlappyBird {
             
             this.arithmeticQuiz.timer = setTimeout(() => {
                 if (this.arithmeticQuiz.correctStreak >= 2) {
-                    // 达到2题后重启游戏
+                    // 达到2题后，先隐藏界面
                     quizContainer.classList.add('hidden');
                     this.gameOverScreen.classList.add('hidden');
                     
-                    if (this.animationFrameId) {
-                        cancelAnimationFrame(this.animationFrameId);
-                        this.animationFrameId = null;
-                    }
-                    
-                    // 重置所有状态并开始游戏
-                    this.init(false);
-                    this.lastTime = 0;
-                    this.birdFrame = 0;
-                    this.gameState = 'playing';
-                    this.startAnimation();
-                    this.addPipe();
-                    
-                    // 重置算术题状态
-                    this.arithmeticQuiz.isProcessing = false;
-                    this.arithmeticQuiz.timer = null;
-                    this.arithmeticQuiz.correctStreak = 0;
+                    // 显示倒计时后再开始游戏
+                    this.showCountdown().then(() => {
+                        if (this.animationFrameId) {
+                            cancelAnimationFrame(this.animationFrameId);
+                            this.animationFrameId = null;
+                        }
+                        
+                        this.init(false);
+                        this.lastTime = 0;
+                        this.birdFrame = 0;
+                        this.gameState = 'playing';
+                        this.startAnimation();
+                        this.addPipe();
+                        
+                        this.arithmeticQuiz.isProcessing = false;
+                        this.arithmeticQuiz.timer = null;
+                        this.arithmeticQuiz.correctStreak = 0;
+                    });
                 } else {
                     // 生成新题目并更新UI
                     this.generateNewQuestion();
@@ -935,7 +946,7 @@ class FlappyBird {
             const t = i / audioBuffer.length;
             // 创建一个下降的音调效果
             channelData[i] = (
-                Math.sin(2 * Math.PI * (600 - 300 * t) * t) * 0.5 +  // 主音频从600Hz降至300Hz
+                Math.sin(2 * Math.PI * (600 - 300 * t) * t) * 0.5 +  // 主音频���600Hz降至300Hz
                 Math.sin(2 * Math.PI * (400 - 200 * t) * t) * 0.3    // 添加和声
             ) * Math.pow(1 - t, 1.5);  // 平滑的音量衰减
         }
@@ -982,6 +993,57 @@ class FlappyBird {
         
         // 更新UI（这里会同时更新进度显示）
         this.updateQuizUI();
+    }
+
+    // 创建倒计时元素
+    createCountdownElement() {
+        const countdown = document.createElement('div');
+        countdown.className = 'countdown hidden';
+        // 设置初始文本
+        countdown.innerHTML = '3';
+        document.querySelector('.game-container').appendChild(countdown);
+    }
+
+    // 添加倒计时显示方法
+    showCountdown() {
+        return new Promise(resolve => {
+            const countdown = document.querySelector('.countdown');
+            let count = 3;
+            
+            // 重置倒计时元素状态
+            countdown.classList.remove('hidden');
+            countdown.classList.remove('visible');
+            countdown.innerHTML = count.toString();
+            
+            // 强制重绘
+            countdown.offsetHeight;
+            
+            // 显示倒计时
+            countdown.classList.add('visible');
+            
+            const updateCount = () => {
+                if (count > 0) {
+                    countdown.innerHTML = count.toString();
+                    count--;
+                    
+                    if (count > 0) {
+                        setTimeout(updateCount, 1000);
+                    } else {
+                        // 当count为0时，显示最后一秒，然后结束
+                        setTimeout(() => {
+                            countdown.classList.remove('visible');
+                            setTimeout(() => {
+                                countdown.classList.add('hidden');
+                                resolve();
+                            }, 300);
+                        }, 1000);
+                    }
+                }
+            };
+            
+            // 开始倒计时
+            updateCount();
+        });
     }
 }
 
