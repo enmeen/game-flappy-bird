@@ -37,18 +37,37 @@ body {
     justify-content: center;
     align-items: center;
     background: rgba(0, 0, 0, 0.5);
+    padding: 0;
 }
 
 .game-title {
-    font-size: 36px;
-    color: white;
-    margin-bottom: 20px;
+    font-family: "Comic Sans MS", cursive;
+    font-size: 48px;
+    color: #FFD700;  /* 金色 */
+    text-align: center;
+    margin-bottom: 30px;
+    text-shadow: 
+        2px 2px 0 #FF6B6B,   /* 减小阴影偏移 */
+        -2px -2px 0 #4EC0CA, 
+        4px 4px 4px rgba(0,0,0,0.2);  /* 减小阴影范围和透明度 */
+    transform-origin: center;
+    animation: gentleTitleBounce 3s ease-in-out infinite;  /* 增加动画周期，使其更缓慢 */
+    position: relative;
+    letter-spacing: 2px;
 }
 
 .tap-tip {
+    font-family: "Comic Sans MS", cursive;
     font-size: 24px;
     color: white;
-    animation: pulse 1.5s infinite;
+    text-align: center;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    background: linear-gradient(45deg, #FF6B6B, #4EC0CA);
+    padding: 10px 20px;
+    border-radius: 20px;
+    border: 3px solid white;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    animation: tapPulse 1.5s infinite;
 }
 
 .score-board {
@@ -62,15 +81,6 @@ body {
 .current, .best {
     font-size: 24px;
     margin: 10px 0;
-}
-
-.restart-btn {
-    padding: 10px 20px;
-    font-size: 20px;
-    background: #f1c40f;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
 }
 
 .hidden {
@@ -93,5 +103,493 @@ body {
         height: calc(100vh - 20px);
         max-width: 500px;
         margin: 0 auto;
+    }
+}
+
+.arithmetic-quiz {
+    width: 280px;
+    margin: 30px 0 0;
+    padding: 15px;
+    display: grid;
+    grid-template-rows: auto auto 1fr auto;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 15px;
+    border: 3px solid #FFD700;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    overflow: hidden;
+}
+
+.arithmetic-quiz.hidden {
+    display: none;
+}
+
+.game-over::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: transparent;
+    pointer-events: none;
+    transition: background 0.3s ease;
+}
+
+.game-over.blocking::before {
+    pointer-events: auto;
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.quiz-text {
+    font-family: "Comic Sans MS", "Microsoft YaHei", cursive;
+    color: #FF6B6B;
+    font-size: 18px;
+    margin: 0;
+    text-shadow: 1px 1px 0 #FFF;
+    width: 100%;
+    text-align: center;
+    height: 24px;
+    line-height: 24px;
+    font-weight: bold;
+    padding: 0;
+    display: block;
+}
+
+.quiz-question {
+    width: 90%;
+    font-family: "Comic Sans MS", cursive;
+    font-size: 24px;
+    margin: 0;
+    color: #4A90E2;
+    text-shadow: 2px 2px 0 #FFF;
+    background: #E8F5FF;
+    border-radius: 12px;
+    border: 2px dashed #4A90E2;
+    text-align: center;
+    line-height: 40px;
+}
+
+.quiz-options {
+    width: 100%;
+    height: 100px;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    gap: 10px;
+    padding: 0 10px;
+}
+
+.quiz-option {
+    width: 100%;
+    padding: 10px 5px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(145deg, #FFD700, #FFA500);
+    color: white;
+    cursor: pointer;
+    font-size: 20px;
+    font-family: "Comic Sans MS", cursive;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    box-shadow: 0 3px 0 #D4AF37;
+    text-shadow: 1px 1px 1px rgba(0,0,0,0.2);
+    position: relative;
+    top: 0;
+}
+
+.quiz-option:hover {
+    background: linear-gradient(145deg, #FFE44D, #FFB52E);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 0 #D4AF37;
+}
+
+.quiz-option:active {
+    top: 4px;
+    box-shadow: 0 0 0 #D4AF37;
+}
+
+.quiz-feedback {
+    height: 32px;
+    line-height: 32px;
+    position: relative;
+    bottom: 0;
+    margin: 0;
+    visibility: visible;
+    opacity: 1;
+    font-family: "Comic Sans MS", cursive;
+    font-size: 14px!important;
+    padding: 6px;
+    border-radius: 8px;
+    text-align: center;
+    min-height: 32px;
+    box-sizing: border-box;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.quiz-feedback:not(.hidden) {
+    opacity: 1;
+    visibility: visible;
+}
+
+.quiz-feedback.correct {
+    background: #E8F5E9;
+    border: 2px solid #4CAF50;
+    color: #4CAF50;
+    animation: celebrate 0.5s ease;
+}
+
+.quiz-feedback.wrong {
+    background: #FFEBEE;
+    border: 2px solid #FF4444;
+    color: #FF4444;
+}
+
+@keyframes popIn {
+    0% {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* 添加可爱的装饰元素 */
+.arithmetic-quiz::before,
+.arithmetic-quiz::after {
+    content: '✨';
+    position: absolute;
+    font-size: 20px;
+    animation: sparkle 1.5s infinite;
+}
+
+.arithmetic-quiz::before {
+    left: 20px;
+    top: 20px;
+}
+
+.arithmetic-quiz::after {
+    right: 20px;
+    top: 20px;
+}
+
+@keyframes sparkle {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.2); }
+}
+
+/* 添加正确答案时的庆祝动画 */
+@keyframes celebrate {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1) rotate(5deg); }
+    100% { transform: scale(1) rotate(0deg); }
+}
+
+.quiz-feedback.correct {
+    animation: celebrate 0.5s ease;
+}
+
+/* 游戏结束标题样式优化 */
+.game-over h2 {
+    font-family: "Comic Sans MS", cursive;
+    font-size: 36px;
+    color: #FF6B6B;
+    text-shadow: 
+        2px 2px 0 #FFF,
+        -2px -2px 0 #FFF,
+        2px -2px 0 #FFF,
+        -2px 2px 0 #FFF;
+    height: 50px;
+    line-height: 50px;
+    margin: 0 0 20px 0;
+    text-align: center;
+}
+
+/* 分数显示容器优化 */
+.game-over p {
+    font-family: "Comic Sans MS", cursive;
+    font-size: 22px;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 0 35px;
+    border-radius: 12px;
+    margin: 10px 0;
+    border: 2px solid #FFD700;
+    color: #4A90E2;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+    position: relative;
+    overflow: hidden;
+    height: 44px;
+    line-height: 44px;
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* 分数数字样式优化 */
+.game-over span {
+    font-size: 26px;
+    font-weight: bold;
+    color: #FF8C00;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+    display: inline-block;
+    min-width: 40px;
+    text-align: center;
+    margin-left: 5px;
+}
+
+/* 最高分特殊样式 */
+#bestScore {
+    color: #FFD700;
+    text-shadow: 
+        1px 1px 0 #FF8C00,
+        -1px -1px 0 #FF8C00;
+}
+
+/* 添加装饰性星星 */
+.game-over p::before,
+.game-over p::after {
+    content: '⭐';
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 16px;
+    color: #FFD700;
+    animation: rotateStar 2s linear infinite;
+}
+
+.game-over p::before {
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.game-over p::after {
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+/* 分数弹出动画 */
+@keyframes popScore {
+    0% { transform: scale(0); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+/* 标题摇摆动画 */
+@keyframes wobble {
+    0%, 100% { transform: rotate(0); }
+    25% { transform: rotate(-5deg); }
+    75% { transform: rotate(5deg); }
+}
+
+/* 星星旋转动画 */
+@keyframes rotateStar {
+    0% { transform: translateY(-50%) rotate(0deg); }
+    100% { transform: translateY(-50%) rotate(360deg); }
+}
+
+/* 彩虹文字效果 */
+@keyframes rainbow {
+    0% { color: #FF6B6B; }
+    25% { color: #FFD700; }
+    50% { color: #4CAF50; }
+    75% { color: #4A90E2; }
+    100% { color: #FF6B6B; }
+}
+
+/* 当分数超过最高分时特殊效果 */
+.game-over p:has(#score:not([data-previous])) #score {
+    animation: rainbow 2s linear infinite;
+}
+
+/* 移动端适配优化 */
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+    
+    .game-container {
+        width: 100%;
+        height: calc(100vh - 20px);
+        max-width: 500px;
+        margin: 0 auto;
+    }
+    
+    .game-over h2 {
+        font-size: 32px;
+    }
+    
+    .game-over p {
+        font-size: 20px;
+        padding: 6px 30px;
+    }
+    
+    .quiz-question {
+        font-size: 24px;
+    }
+    
+    .quiz-option {
+        padding: 10px 6px;
+        font-size: 18px;
+    }
+}
+
+/* 超小屏幕适配 */
+@media (max-height: 600px) {
+    .arithmetic-quiz {
+        min-height: 220px;
+    }
+    
+    .quiz-options {
+        margin: 8px auto 35px;
+    }
+}
+
+/* 移动端适配 */
+@media (max-width: 320px) {
+    .arithmetic-quiz {
+        width: 260px;
+        min-height: 200px;
+        padding: 12px;
+    }
+
+    .quiz-question {
+        font-size: 22px;
+    }
+
+    .quiz-option {
+        font-size: 18px;
+        padding: 8px 4px;
+    }
+}
+
+/* 添加占位内容 */
+.quiz-feedback.hidden::after {
+    content: '✨';
+    opacity: 0;
+}
+
+/* 确保在小屏幕上也能正确居中 */
+@media (max-width: 320px) {
+    .quiz-feedback {
+        max-width: 220px;
+    }
+}
+
+/* 添加分数显示的入场动画 */
+@keyframes slideDown {
+    0% {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 为游戏结束界面的元素添加依次滑入效果 */
+.game-over h2 {
+    animation: slideDown 0.5s ease forwards;
+}
+
+.game-over p:nth-child(2) {  /* Score */
+    animation: slideDown 0.5s ease 0.2s forwards;
+    opacity: 0;  /* 初始状态 */
+}
+
+.game-over p:nth-child(3) {  /* Best Score */
+    animation: slideDown 0.5s ease 0.4s forwards;
+    opacity: 0;  /* 初始状态 */
+}
+
+/* 添加新的动画类 */
+.quiz-animate-in {
+    animation: quizSlideIn 0.5s ease forwards;
+}
+
+@keyframes quizSlideIn {
+    0% {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 添加装饰性元素 */
+.game-title::before,
+.game-title::after {
+    content: '🌟';
+    position: absolute;
+    font-size: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    animation: gentleStarTwinkle 2s ease-in-out infinite alternate;  /* 更柔和的闪烁 */
+    opacity: 0.8;  /* 降低初始透明度 */
+}
+
+.game-title::before {
+    left: -40px;
+    animation-delay: 0.5s;
+}
+
+.game-title::after {
+    right: -40px;
+    animation-delay: 1s;
+}
+
+/* 更柔和的标题动画 */
+@keyframes gentleTitleBounce {
+    0%, 100% {
+        transform: scale(1) rotate(-1deg);  /* 减小旋转角度 */
+    }
+    50% {
+        transform: scale(1.03) rotate(1deg);  /* 减小缩放幅度 */
+    }
+}
+
+/* 更柔和的星星动画 */
+@keyframes gentleStarTwinkle {
+    0% {
+        opacity: 0.6;
+        transform: translateY(-50%) scale(0.9) rotate(0deg);
+    }
+    100% {
+        opacity: 0.9;
+        transform: translateY(-50%) scale(1.1) rotate(180deg);  /* 减少旋转角度 */
+    }
+}
+
+/* 点击提示动画 */
+@keyframes tapPulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    50% {
+        transform: scale(1.1);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
 } 

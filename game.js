@@ -102,15 +102,38 @@ class FlappyBird {
             this.setupCanvas();
             this.updateGameElements();
         });
+        
+        // 添加算术题相关属性
+        this.arithmeticQuiz = {
+            question: '',
+            answer: 0,
+            options: [],
+            isProcessing: false,  // 添加状态锁
+            timer: null,          // 添加定时器引用
+            wrongAttempts: 0,     // 记录连续答错次数
+            waitTime: 0,          // 答错后的等待时间
+            cooldownTimer: null,   // 冷却时间定时器
+            correctStreak: 0    // 添加连续答对计数
+        };
+        
+        // 初始化音频上下文和音效
+        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        this.jumpSound = null;
+        this.gameOverSound = null;  // 添加游戏结束音效
+        this.createJumpSound();
+        this.createGameOverSound();  // 创建游戏结束音效
     }
 
     init(isFirstInit = false) {
         // 游戏状态
         this.gameState = 'start';
         this.score = 0;
-        this.bestScore = localStorage.getItem('bestScore') || 0;
         
-        // 小鸟属性
+        // 从localStorage获取最高分并更新显示
+        this.bestScore = parseInt(localStorage.getItem('bestScore')) || 0;
+        this.bestScoreElement.textContent = this.bestScore;
+        
+        // 小鸟属
         this.bird = {
             x: this.gameWidth * 0.2,
             y: this.gameHeight / 2,
@@ -176,16 +199,31 @@ class FlappyBird {
         
         this.init(false);
         this.startAnimation();
-        this.gameOverScreen.classList.add('hidden');
-        this.startScreen.classList.remove('hidden');
         
         // 更新游戏元素位置和大小
         this.updateGameElements();
+        
+        // 隐藏算术题
+        document.querySelector('.arithmetic-quiz').classList.add('hidden');
+        
+        // 清理定时器
+        if (this.arithmeticQuiz.timer) {
+            clearTimeout(this.arithmeticQuiz.timer);
+            this.arithmeticQuiz.timer = null;
+        }
+        
+        // 重置状态
+        this.arithmeticQuiz.isProcessing = false;
     }
 
     setupEventListeners() {
         // 处理点击/触摸事件
         const handleInput = (e) => {
+            // 如果游戏界面正在阻止点击，则不处理任何点击事件
+            if (this.gameOverScreen.classList.contains('blocking')) {
+                return;
+            }
+            
             e.preventDefault();
             
             if (this.gameState === 'start') {
@@ -193,9 +231,8 @@ class FlappyBird {
             } else if (this.gameState === 'playing') {
                 if (this.bird.velocity > -4) {
                     this.bird.velocity = this.bird.jump;
+                    this.playJumpSound();  // 添加音效
                 }
-            } else if (this.gameState === 'gameOver') {
-                this.resetGame();
             }
         };
 
@@ -206,9 +243,6 @@ class FlappyBird {
         // 给开始界面添加事件监听
         this.startScreen.addEventListener('click', handleInput);
         this.startScreen.addEventListener('touchstart', handleInput);
-        
-        // 重新开始按钮事件
-        document.querySelector('.restart-btn').addEventListener('click', () => this.resetGame());
     }
 
     startGame() {
@@ -223,7 +257,7 @@ class FlappyBird {
         const minPipeHeight = this.gameHeight * 0.1;
         const maxPipeHeight = this.gameHeight * 0.6;  // 增加最大管道高度
         
-        // 计算当前管道间隙
+        // 计算当前管间隙
         const currentPipeGap = Math.max(
             this.initialPipeGap * (1 - Math.min(this.score * this.pipeGapDecrease, 0.3)),
             this.minPipeGap
@@ -252,21 +286,21 @@ class FlappyBird {
     update(timestamp) {
         if (this.gameState !== 'playing') return;
         
-        // 计算时间差
-        const deltaTime = timestamp - (this.lastTime || timestamp);
+        // 计算时间差并限制最大值
+        const deltaTime = Math.min(timestamp - (this.lastTime || timestamp), 32); // 限制最大时间差为32ms
         this.lastTime = timestamp;
-
+        
         // 更新小鸟动画帧
         this.birdFrame += this.birdAnimationSpeed;
         if (this.birdFrame >= this.images.bird.length) {
             this.birdFrame = 0;
         }
-
-        // 更新小鸟速度和位置
-        this.bird.velocity += this.bird.gravity;
+        
+        // 根据时间差更新小鸟位置
+        this.bird.velocity += this.bird.gravity * (deltaTime / 16); // 标准化重力
         this.bird.velocity = Math.min(this.bird.velocity, this.bird.maxVelocity);
-        this.bird.y += this.bird.velocity;
-
+        this.bird.y += this.bird.velocity * (deltaTime / 16); // 标准化移动
+        
         // 检查屏幕边界
         if (this.bird.y < 0 || this.bird.y + this.bird.height > this.gameHeight) {
             this.gameOver();
@@ -289,6 +323,7 @@ class FlappyBird {
             if (!pipe.passed && pipe.x + this.pipeWidth < this.bird.x) {
                 pipe.passed = true;
                 this.score++;
+                // 实时更新分数显示
                 this.scoreElement.textContent = this.score;
             }
         });
@@ -339,12 +374,48 @@ class FlappyBird {
 
     gameOver() {
         this.gameState = 'gameOver';
-        if (this.score > this.bestScore) {
+        this.gameOverScreen.classList.add('blocking');
+        
+        // 播放游戏结束音效
+        this.playGameOverSound();
+        
+        // 更新分数显示
+        this.scoreElement.textContent = this.score;
+        
+        // 检查并更新最高分
+        const currentBestScore = parseInt(localStorage.getItem('bestScore')) || 0;
+        if (this.score > currentBestScore) {
             this.bestScore = this.score;
-            localStorage.setItem('bestScore', this.bestScore);
-            this.bestScoreElement.textContent = this.bestScore;
+            localStorage.setItem('bestScore', this.score);
         }
+        
+        // 更新最高分显示
+        this.bestScoreElement.textContent = Math.max(currentBestScore, this.score);
+        
+        // 先显示游戏结束界面
         this.gameOverScreen.classList.remove('hidden');
+        
+        // 延迟显示算术题
+        setTimeout(() => {
+            this.gameOverScreen.classList.remove('blocking');
+            const quizContainer = document.querySelector('.arithmetic-quiz');
+            
+            // 重置状态
+            quizContainer.classList.remove('quiz-animate-in');
+            quizContainer.classList.remove('hidden');
+            
+            // 强制重绘
+            quizContainer.offsetHeight;
+            
+            // 添加动画类
+            quizContainer.classList.add('quiz-animate-in');
+            
+            // 生成算术题
+            this.generateArithmeticQuiz();
+        }, 1000);
+        
+        // 重置连续答对计数
+        this.arithmeticQuiz.correctStreak = 0;
     }
 
     draw() {
@@ -485,6 +556,441 @@ class FlappyBird {
         this.minPipeGap = this.gameHeight * 0.18;
         this.pipeGap = this.initialPipeGap;
         this.pipeSpacing = this.gameWidth * 0.5;  // 增加管道间距
+    }
+
+    // 生成随机算术题
+    generateArithmeticQuiz() {
+        // 清理之前的定时器
+        if (this.arithmeticQuiz.timer) {
+            clearTimeout(this.arithmeticQuiz.timer);
+            this.arithmeticQuiz.timer = null;
+        }
+        
+        // 重置处理状态
+        this.arithmeticQuiz.isProcessing = false;
+        
+        const quizContainer = document.querySelector('.arithmetic-quiz');
+        
+        // 先隐藏容器
+        quizContainer.classList.add('hidden');
+        quizContainer.classList.remove('quiz-animate-in');
+        
+        // 生成题目内容
+        const num1 = Math.floor(Math.random() * 10) + 1;
+        const num2 = Math.floor(Math.random() * 10) + 1;
+        const isAddition = Math.random() > 0.5;
+        
+        if (isAddition) {
+            this.arithmeticQuiz.question = `${num1} + ${num2} = ?`;
+            this.arithmeticQuiz.answer = num1 + num2;
+        } else {
+            const [larger, smaller] = [Math.max(num1, num2), Math.min(num1, num2)];
+            this.arithmeticQuiz.question = `${larger} - ${smaller} = ?`;
+            this.arithmeticQuiz.answer = larger - smaller;
+        }
+        
+        this.generateQuizOptions();
+        
+        // 使用 setTimeout 确保 DOM 更新
+        setTimeout(() => {
+            // 更新 UI
+            this.updateQuizUI();
+            
+            // 移除隐藏类并添加动画类
+            quizContainer.classList.remove('hidden');
+            
+            // 强制重绘
+            quizContainer.offsetHeight;
+            
+            // 添加动画类
+            quizContainer.classList.add('quiz-animate-in');
+        }, 50);
+        
+        // 更新题目提示，显示当前进度
+        const quizText = document.querySelector('.quiz-text');
+        quizText.textContent = `请回答: (${this.arithmeticQuiz.correctStreak + 1}/2)`;
+    }
+
+    // 生成选项
+    generateQuizOptions() {
+        const answer = this.arithmeticQuiz.answer;
+        
+        // 直接构建包含正确答案的选项数组
+        const options = [answer];
+        
+        // 生成干扰项的范围（避免负数和过大的数）
+        const minOption = Math.max(0, answer - 5);
+        const maxOption = Math.min(20, answer + 5);
+        
+        // 创建可选项池（排除正确答案）
+        const availableOptions = [];
+        for (let i = minOption; i <= maxOption; i++) {
+            if (i !== answer) {
+                availableOptions.push(i);
+            }
+        }
+        
+        // 随机选择3个干扰项
+        for (let i = 0; i < 3; i++) {
+            if (availableOptions.length > 0) {
+                // 从可用选项中随机选择
+                const randomIndex = Math.floor(Math.random() * availableOptions.length);
+                options.push(availableOptions[randomIndex]);
+                // 移除已选择的选项
+                availableOptions.splice(randomIndex, 1);
+            } else {
+                // 如果可用选项不足，生成新的干扰项
+                let newOption;
+                do {
+                    // 生成一个在合理范围内的随机数
+                    const offset = Math.floor(Math.random() * 5) + 1;
+                    newOption = answer + (Math.random() < 0.5 ? offset : -offset);
+                } while (
+                    newOption < 0 || 
+                    newOption > 20 || 
+                    options.includes(newOption) || 
+                    newOption === answer
+                );
+                options.push(newOption);
+            }
+        }
+        
+        // 打乱选项顺序（Fisher-Yates 洗牌算法）
+        for (let i = options.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [options[i], options[j]] = [options[j], options[i]];
+        }
+        
+        // 设置选项并进行验证
+        this.arithmeticQuiz.options = options;
+        
+        // 最终验证
+        if (!this.validateOptions(answer)) {
+            console.error('选项生成失败，使用备用方案');
+            this.generateFallbackOptions(answer);
+        }
+    }
+
+    // 添加选项验证方法
+    validateOptions(answer) {
+        const options = this.arithmeticQuiz.options;
+        return (
+            options.length === 4 &&
+            options.includes(answer) &&
+            options.every(opt => opt >= 0 && opt <= 20) &&
+            new Set(options).size === 4  // 确保没有重复选项
+        );
+    }
+
+    // 添加备用选项生成方法
+    generateFallbackOptions(answer) {
+        // 简单且可靠的备用方案
+        this.arithmeticQuiz.options = [
+            answer,
+            Math.max(0, answer - 2),
+            Math.min(20, answer + 2),
+            Math.max(0, Math.min(20, answer + (answer > 10 ? -3 : 3)))
+        ];
+        
+        // 打乱顺序
+        this.arithmeticQuiz.options.sort(() => Math.random() - 0.5);
+    }
+
+    // 更新算术题UI
+    updateQuizUI() {
+        const quizContainer = document.querySelector('.arithmetic-quiz');
+        const questionEl = quizContainer.querySelector('.quiz-question');
+        const optionsEl = quizContainer.querySelector('.quiz-options');
+        const feedbackEl = quizContainer.querySelector('.quiz-feedback');
+        
+        // 显示题目
+        questionEl.textContent = this.arithmeticQuiz.question;
+        
+        // 清空并重新生成选项按钮
+        optionsEl.innerHTML = '';
+        this.arithmeticQuiz.options.forEach(option => {
+            const button = document.createElement('button');
+            button.className = 'quiz-option';
+            button.textContent = option;
+            button.onclick = () => {
+                // 添加点击状态检查
+                if (!this.arithmeticQuiz.isProcessing && !button.disabled) {
+                    this.checkAnswer(option);
+                }
+            };
+            optionsEl.appendChild(button);
+        });
+        
+        // 隐藏反馈信息
+        feedbackEl.className = 'quiz-feedback hidden';
+        
+        // 显示算术题区域
+        quizContainer.classList.remove('hidden');
+        
+        // 重置状态
+        this.arithmeticQuiz.isProcessing = false;
+    }
+
+    // 检查答案
+    checkAnswer(selectedAnswer) {
+        if (this.arithmeticQuiz.isProcessing) {
+            return;
+        }
+        
+        this.arithmeticQuiz.isProcessing = true;
+        const feedbackEl = document.querySelector('.quiz-feedback');
+        const quizContainer = document.querySelector('.arithmetic-quiz');
+        
+        this.clearQuizTimers();
+        this.disableQuizButtons(quizContainer);
+        
+        if (selectedAnswer === this.arithmeticQuiz.answer) {
+            // 增加连续答对计数
+            this.arithmeticQuiz.correctStreak++;
+            
+            // 更新反馈文本
+            const remainingQuestions = 2 - this.arithmeticQuiz.correctStreak;
+            feedbackEl.textContent = remainingQuestions > 0 
+                ? `回答正确! 还需要答对${remainingQuestions}题` 
+                : '回答正确! 游戏即将开始';
+            feedbackEl.className = 'quiz-feedback correct';
+            
+            this.arithmeticQuiz.timer = setTimeout(() => {
+                if (this.arithmeticQuiz.correctStreak >= 2) {
+                    // 达到2题后重启游戏
+                    quizContainer.classList.add('hidden');
+                    this.gameOverScreen.classList.add('hidden');
+                    
+                    if (this.animationFrameId) {
+                        cancelAnimationFrame(this.animationFrameId);
+                        this.animationFrameId = null;
+                    }
+                    
+                    // 重置所有状态并开始游戏
+                    this.init(false);
+                    this.lastTime = 0;
+                    this.birdFrame = 0;
+                    this.gameState = 'playing';
+                    this.startAnimation();
+                    this.addPipe();
+                    
+                    // 重置算术题状态
+                    this.arithmeticQuiz.isProcessing = false;
+                    this.arithmeticQuiz.timer = null;
+                    this.arithmeticQuiz.correctStreak = 0;
+                } else {
+                    // 未达到2题，直接更新下一题（类似错误答案的处理）
+                    // 生成新的题目内容
+                    const num1 = Math.floor(Math.random() * 10) + 1;
+                    const num2 = Math.floor(Math.random() * 10) + 1;
+                    const isAddition = Math.random() > 0.5;
+                    
+                    if (isAddition) {
+                        this.arithmeticQuiz.question = `${num1} + ${num2} = ?`;
+                        this.arithmeticQuiz.answer = num1 + num2;
+                    } else {
+                        const [larger, smaller] = [Math.max(num1, num2), Math.min(num1, num2)];
+                        this.arithmeticQuiz.question = `${larger} - ${smaller} = ?`;
+                        this.arithmeticQuiz.answer = larger - smaller;
+                    }
+                    
+                    // 生成新选项
+                    this.generateQuizOptions();
+                    
+                    // 直接更新 UI 内容
+                    const questionEl = quizContainer.querySelector('.quiz-question');
+                    const optionsEl = quizContainer.querySelector('.quiz-options');
+                    
+                    // 更新题目
+                    questionEl.textContent = this.arithmeticQuiz.question;
+                    
+                    // 更新选项
+                    optionsEl.innerHTML = '';
+                    this.arithmeticQuiz.options.forEach(option => {
+                        const button = document.createElement('button');
+                        button.className = 'quiz-option';
+                        button.textContent = option;
+                        button.onclick = () => {
+                            if (!this.arithmeticQuiz.isProcessing) {
+                                this.checkAnswer(option);
+                            }
+                        };
+                        optionsEl.appendChild(button);
+                    });
+                    
+                    // 隐藏反馈信息
+                    feedbackEl.className = 'quiz-feedback hidden';
+                    
+                    // 重置处理状态
+                    this.arithmeticQuiz.isProcessing = false;
+                    this.arithmeticQuiz.timer = null;
+                    
+                    // 更新题目提示，显示当前进度
+                    const quizText = document.querySelector('.quiz-text');
+                    quizText.textContent = `请回答: (${this.arithmeticQuiz.correctStreak + 1}/2)`;
+                }
+            }, 1000);
+        } else {
+            // 答错时重置连续答对计数
+            this.arithmeticQuiz.correctStreak = 0;
+            
+            feedbackEl.textContent = '回答错误';
+            feedbackEl.className = 'quiz-feedback wrong';
+            
+            // 延迟后生成新题目
+            this.arithmeticQuiz.timer = setTimeout(() => {
+                // 生成新的题目内容
+                const num1 = Math.floor(Math.random() * 10) + 1;
+                const num2 = Math.floor(Math.random() * 10) + 1;
+                const isAddition = Math.random() > 0.5;
+                
+                if (isAddition) {
+                    this.arithmeticQuiz.question = `${num1} + ${num2} = ?`;
+                    this.arithmeticQuiz.answer = num1 + num2;
+                } else {
+                    const [larger, smaller] = [Math.max(num1, num2), Math.min(num1, num2)];
+                    this.arithmeticQuiz.question = `${larger} - ${smaller} = ?`;
+                    this.arithmeticQuiz.answer = larger - smaller;
+                }
+                
+                // 生成新选项
+                this.generateQuizOptions();
+                
+                // 直接更新 UI 内容
+                const questionEl = quizContainer.querySelector('.quiz-question');
+                const optionsEl = quizContainer.querySelector('.quiz-options');
+                
+                // 更新题目
+                questionEl.textContent = this.arithmeticQuiz.question;
+                
+                // 更新选项
+                optionsEl.innerHTML = '';
+                this.arithmeticQuiz.options.forEach(option => {
+                    const button = document.createElement('button');
+                    button.className = 'quiz-option';
+                    button.textContent = option;
+                    button.onclick = () => {
+                        if (!this.arithmeticQuiz.isProcessing) {
+                            this.checkAnswer(option);
+                        }
+                    };
+                    optionsEl.appendChild(button);
+                });
+                
+                // 隐藏反馈信息
+                feedbackEl.className = 'quiz-feedback hidden';
+                
+                // 重置处理状态
+                this.arithmeticQuiz.isProcessing = false;
+                this.arithmeticQuiz.timer = null;
+                
+            }, 1000);  // 1秒后更新新题目
+        }
+    }
+
+    // 计算等待时间
+    calculateWaitTime() {
+        // 连续答错次数越多，等待时间越长
+        return Math.pow(2, this.arithmeticQuiz.wrongAttempts - 1) * 3; // 3, 6, 12, 24秒...
+    }
+
+    // 清理定时器
+    clearQuizTimers() {
+        if (this.arithmeticQuiz.timer) {
+            clearTimeout(this.arithmeticQuiz.timer);
+            this.arithmeticQuiz.timer = null;
+        }
+        if (this.arithmeticQuiz.cooldownTimer) {
+            clearTimeout(this.arithmeticQuiz.cooldownTimer);
+            this.arithmeticQuiz.cooldownTimer = null;
+        }
+    }
+
+    // 禁用答题按钮
+    disableQuizButtons(quizContainer) {
+        const buttons = quizContainer.querySelectorAll('.quiz-option');
+        buttons.forEach(button => {
+            button.disabled = true;
+            button.style.pointerEvents = 'none';
+        });
+    }
+
+    // 修改 createJumpSound 方法
+    createJumpSound() {
+        // 创建音频缓冲区
+        const duration = 0.15;  // 增加持续时间
+        const audioBuffer = this.audioContext.createBuffer(1, this.audioContext.sampleRate * duration, this.audioContext.sampleRate);
+        const channelData = audioBuffer.getChannelData(0);
+        
+        // 生成更柔和的音效波形
+        for (let i = 0; i < audioBuffer.length; i++) {
+            const t = i / audioBuffer.length;
+            // 降低基础频率，添加更柔和的泛音
+            channelData[i] = (
+                Math.sin(2 * Math.PI * 400 * t) * 0.5 + // 基础频率降低到400Hz
+                Math.sin(2 * Math.PI * 600 * t) * 0.3 + // 添加600Hz的泛音
+                Math.sin(2 * Math.PI * 800 * t) * 0.2   // 添加800Hz的泛音
+            ) * Math.pow(1 - t, 2);  // 使用平方函数实现更平滑的衰减
+        }
+        
+        this.jumpSound = audioBuffer;
+    }
+    
+    // 修改 playJumpSound 方法，添加音量控制
+    playJumpSound() {
+        if (this.jumpSound && this.audioContext) {
+            const source = this.audioContext.createBufferSource();
+            const gainNode = this.audioContext.createGain();
+            
+            // 设置音量
+            gainNode.gain.value = 0.3;  // 降低音量到30%
+            
+            // 连接节点
+            source.buffer = this.jumpSound;
+            source.connect(gainNode);
+            gainNode.connect(this.audioContext.destination);
+            
+            // 启动音频
+            source.start();
+        }
+    }
+    
+    // 添加游戏结束音效生成方法
+    createGameOverSound() {
+        const duration = 0.5;  // 音效持续时间
+        const audioBuffer = this.audioContext.createBuffer(1, this.audioContext.sampleRate * duration, this.audioContext.sampleRate);
+        const channelData = audioBuffer.getChannelData(0);
+        
+        // 生成音效波形
+        for (let i = 0; i < audioBuffer.length; i++) {
+            const t = i / audioBuffer.length;
+            // 创建一个下降的音调效果
+            channelData[i] = (
+                Math.sin(2 * Math.PI * (600 - 300 * t) * t) * 0.5 +  // 主音频从600Hz降至300Hz
+                Math.sin(2 * Math.PI * (400 - 200 * t) * t) * 0.3    // 添加和声
+            ) * Math.pow(1 - t, 1.5);  // 平滑的音量衰减
+        }
+        
+        this.gameOverSound = audioBuffer;
+    }
+    
+    // 添加播放游戏结束音效的方法
+    playGameOverSound() {
+        if (this.gameOverSound && this.audioContext) {
+            const source = this.audioContext.createBufferSource();
+            const gainNode = this.audioContext.createGain();
+            
+            // 设置音量
+            gainNode.gain.value = 0.4;  // 设置适中的音量
+            
+            // 连接节点
+            source.buffer = this.gameOverSound;
+            source.connect(gainNode);
+            gainNode.connect(this.audioContext.destination);
+            
+            // 启动音频
+            source.start();
+        }
     }
 }
 
