@@ -2,13 +2,16 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Flappy Bird</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="game-container">
         <canvas id="gameCanvas"></canvas>
+        <div class="score-display hidden">
+            <p class="score-text">0</p>
+        </div>
         <div class="start-screen">
             <div class="game-title">Flappy Bird</div>
             <div class="tap-tip">点击开始游戏</div>
@@ -17,13 +20,12 @@
             <h2>Game Over</h2>
             <p>Score: <span id="score">0</span></p>
             <p>Best Score: <span id="bestScore">0</span></p>
-            
-            <div class="arithmetic-quiz hidden">
-                <p class="quiz-text">请回答:</p>
-                <div class="quiz-question"></div>
-                <div class="quiz-options"></div>
-                <p class="quiz-feedback hidden">请选择</p>
-            </div>
+        </div>
+        <div class="arithmetic-quiz hidden">
+            <p class="quiz-text">请回答:</p>
+            <div class="quiz-question"></div>
+            <div class="quiz-options"></div>
+            <p class="quiz-feedback hidden">请选择</p>
         </div>
     </div>
     <script src="game.js"></script>

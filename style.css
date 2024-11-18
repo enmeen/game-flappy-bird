@@ -1,13 +1,25 @@
+/* 通用样式 */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    -webkit-user-select: none;  /* Safari */
-    -moz-user-select: none;     /* Firefox */
-    -ms-user-select: none;      /* IE/Edge */
-    user-select: none;          /* 标准语法 */
-    -webkit-tap-highlight-color: transparent;  /* 移动端点击高亮 */
-    outline: none;              /* 移除点击轮廓 */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    outline: none;
+}
+
+/* 基础布局 */
+html, body {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    touch-action: none;
+    -ms-touch-action: none;
+    overscroll-behavior: none;
 }
 
 body {
@@ -19,6 +31,7 @@ body {
     padding: 20px;
 }
 
+/* 游戏容器 */
 .game-container {
     position: relative;
     width: 320px;
@@ -32,6 +45,7 @@ body {
     height: 100%;
 }
 
+/* 游戏界面 */
 .start-screen, .game-over {
     position: absolute;
     top: 0;
@@ -44,8 +58,10 @@ body {
     align-items: center;
     background: rgba(0, 0, 0, 0.5);
     padding: 0;
+    z-index: 1000;
 }
 
+/* 游戏标题 */
 .game-title {
     font-size: 48px;
     color: #FFD700;
@@ -61,6 +77,7 @@ body {
     letter-spacing: 2px;
 }
 
+/* 点击提示 */
 .tap-tip {
     font-size: 24px;
     color: white;
@@ -74,6 +91,7 @@ body {
     animation: tapPulse 1.5s infinite;
 }
 
+/* 分数板 */
 .score-board {
     background: white;
     padding: 20px;
@@ -87,87 +105,44 @@ body {
     margin: 10px 0;
 }
 
-.hidden {
-    display: none;
-}
-
-@keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-    100% { transform: scale(1); }
-}
-
-@media (max-width: 768px) {
-    body {
-        padding: 10px;
-    }
-    
-    .game-container {
-        width: 100%;
-        height: calc(100vh - 20px);
-        max-width: 500px;
-        margin: 0 auto;
-    }
-}
-
+/* 算术题容器 */
 .arithmetic-quiz {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     width: 280px;
-    margin: 30px 0 0;
-    padding: 15px;
-    display: grid;
-    grid-template-rows: auto auto 1fr auto;
-    gap: 10px;
+    min-height: 200px;
+    padding: 20px 15px;
     background: rgba(255, 255, 255, 0.95);
     border-radius: 15px;
     border: 3px solid #FFD700;
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    position: relative;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     align-items: center;
-    overflow: hidden;
+    gap: 15px;
+    z-index: 1500;
+    margin-top: 50px;
 }
 
-.arithmetic-quiz.hidden {
-    display: none;
-}
-
-.game-over::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: transparent;
-    pointer-events: none;
-    transition: background 0.3s ease;
-}
-
-.game-over.blocking::before {
-    pointer-events: auto;
-    background: rgba(0, 0, 0, 0.1);
-}
-
+/* 算术题组件 */
 .quiz-text {
     color: #FF6B6B;
     font-size: 18px;
-    margin: 0;
     text-shadow: 1px 1px 0 #FFF;
     width: 100%;
     text-align: center;
     height: 24px;
     line-height: 24px;
     font-weight: bold;
-    padding: 0;
-    display: block;
 }
 
 .quiz-question {
     width: 90%;
     font-size: 24px;
-    margin: 0;
+    margin: 15px 0;
     color: #4A90E2;
     text-shadow: 2px 2px 0 #FFF;
     background: #E8F5FF;
@@ -175,12 +150,16 @@ body {
     border: 2px dashed #4A90E2;
     text-align: center;
     line-height: 40px;
+    height: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .quiz-options {
     width: 100%;
     height: 100px;
-    margin: 0;
+    margin: 10px 0;
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     grid-template-rows: repeat(2, 1fr);
@@ -205,24 +184,11 @@ body {
     top: 0;
 }
 
-.quiz-option:hover {
-    background: linear-gradient(145deg, #FFE44D, #FFB52E);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 0 #D4AF37;
-}
-
-.quiz-option:active {
-    top: 4px;
-    box-shadow: 0 0 0 #D4AF37;
-}
-
 .quiz-feedback {
     height: 32px;
-    line-height: 32px;
-    position: relative;
-    bottom: 0;
-    margin: 0;
-    font-size: 14px!important;
+    width: 90%;
+    margin: 10px 0;
+    font-size: 14px !important;
     padding: 6px;
     border-radius: 8px;
     text-align: center;
@@ -231,6 +197,43 @@ body {
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+/* 倒计时 */
+.countdown {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 120px;
+    color: #FFD700;
+    text-shadow: 
+        4px 4px 0 #FF6B6B,
+        -4px -4px 0 #4EC0CA,
+        0 0 20px rgba(255, 255, 255, 0.8);
+    z-index: 1600;
+    width: 200px;
+    height: 200px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 50%;
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 
+        0 0 30px rgba(255, 215, 0, 0.3),
+        inset 0 0 20px rgba(255, 255, 255, 0.2);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+/* 状态类 */
+.hidden {
+    display: none !important;
+}
+
+.countdown.visible {
+    opacity: 1;
 }
 
 .quiz-feedback:not(.hidden) {
@@ -251,169 +254,44 @@ body {
     color: #FF4444;
 }
 
-@keyframes popIn {
-    0% {
-        transform: scale(0.8);
-        opacity: 0;
+/* 交互状态 */
+.quiz-option:hover {
+    background: linear-gradient(145deg, #FFE44D, #FFB52E);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 0 #D4AF37;
+}
+
+.quiz-option:active {
+    top: 4px;
+    box-shadow: 0 0 0 #D4AF37;
+}
+
+.quiz-option:focus {
+    outline: none;
+}
+
+/* 动画定义 */
+@keyframes tapPulse {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
     50% {
         transform: scale(1.1);
-    }
-    100% {
-        transform: scale(1);
-        opacity: 1;
+        box-shadow: 0 6px 12px rgba(0,0,0,0.3);
     }
 }
 
-/* 添加可爱的装饰元素 */
-.arithmetic-quiz::before,
-.arithmetic-quiz::after {
-    content: '✨';
-    position: absolute;
-    font-size: 20px;
-    animation: sparkle 1.5s infinite;
+@keyframes gentleTitleBounce {
+    0%, 100% {
+        transform: scale(1) rotate(-1deg);
+    }
+    50% {
+        transform: scale(1.03) rotate(1deg);
+    }
 }
 
-.arithmetic-quiz::before {
-    left: 20px;
-    top: 20px;
-}
-
-.arithmetic-quiz::after {
-    right: 20px;
-    top: 20px;
-}
-
-@keyframes sparkle {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.5; transform: scale(1.2); }
-}
-
-/* 添加正确答案时的庆祝动画 */
-@keyframes celebrate {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.1) rotate(5deg); }
-    100% { transform: scale(1) rotate(0deg); }
-}
-
-.quiz-feedback.correct {
-    animation: celebrate 0.5s ease;
-}
-
-/* 游戏结束标题样式优化 */
-.game-over h2 {
-    font-size: 36px;
-    color: #FF6B6B;
-    text-shadow: 
-        2px 2px 0 #FFF,
-        -2px -2px 0 #FFF,
-        2px -2px 0 #FFF,
-        -2px 2px 0 #FFF;
-    height: 50px;
-    line-height: 50px;
-    margin: 0 0 20px 0;
-    text-align: center;
-}
-
-/* 分数显示容器优化 */
-.game-over p {
-    font-size: 22px;
-    background: rgba(255, 255, 255, 0.9);
-    padding: 0 35px;
-    border-radius: 12px;
-    margin: 10px 0;
-    border: 2px solid #FFD700;
-    color: #4A90E2;
-    box-shadow: 0 3px 6px rgba(0,0,0,0.2);
-    position: relative;
-    overflow: hidden;
-    height: 44px;
-    line-height: 44px;
-    text-align: center;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-/* 分数数字样式优化 */
-.game-over span {
-    font-size: 26px;
-    font-weight: bold;
-    color: #FF8C00;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
-    display: inline-block;
-    min-width: 40px;
-    text-align: center;
-    margin-left: 5px;
-}
-
-/* 最高分特殊样式 */
-#bestScore {
-    color: #FFD700;
-    text-shadow: 
-        1px 1px 0 #FF8C00,
-        -1px -1px 0 #FF8C00;
-}
-
-/* 添加装饰性星星 */
-.game-over p::before,
-.game-over p::after {
-    content: '⭐';
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 16px;
-    color: #FFD700;
-    animation: rotateStar 2s linear infinite;
-}
-
-.game-over p::before {
-    left: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-}
-
-.game-over p::after {
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-}
-
-/* 分数弹出动画 */
-@keyframes popScore {
-    0% { transform: scale(0); }
-    50% { transform: scale(1.2); }
-    100% { transform: scale(1); }
-}
-
-/* 标题摇摆动画 */
-@keyframes wobble {
-    0%, 100% { transform: rotate(0); }
-    25% { transform: rotate(-5deg); }
-    75% { transform: rotate(5deg); }
-}
-
-/* 星星旋转动画 */
-@keyframes rotateStar {
-    0% { transform: translateY(-50%) rotate(0deg); }
-    100% { transform: translateY(-50%) rotate(360deg); }
-}
-
-/* 彩虹文字效果 */
-@keyframes rainbow {
-    0% { color: #FF6B6B; }
-    25% { color: #FFD700; }
-    50% { color: #4CAF50; }
-    75% { color: #4A90E2; }
-    100% { color: #FF6B6B; }
-}
-
-/* 当分数超过最高分时特殊效果 */
-.game-over p:has(#score:not([data-previous])) #score {
-    animation: rainbow 2s linear infinite;
-}
-
-/* 移动端适配优化 */
+/* 媒体查询 */
 @media (max-width: 768px) {
     body {
         padding: 10px;
@@ -426,250 +304,6 @@ body {
         margin: 0 auto;
     }
     
-    .game-over h2 {
-        font-size: 32px;
-    }
-    
-    .game-over p {
-        font-size: 20px;
-        padding: 6px 30px;
-    }
-    
-    .quiz-question {
-        font-size: 24px;
-    }
-    
-    .quiz-option {
-        padding: 10px 6px;
-        font-size: 18px;
-    }
-}
-
-/* 超小屏幕适配 */
-@media (max-height: 600px) {
-    .arithmetic-quiz {
-        min-height: 220px;
-    }
-    
-    .quiz-options {
-        margin: 8px auto 35px;
-    }
-}
-
-/* 移动端适配 */
-@media (max-width: 320px) {
-    .arithmetic-quiz {
-        width: 260px;
-        min-height: 200px;
-        padding: 12px;
-    }
-
-    .quiz-question {
-        font-size: 22px;
-    }
-
-    .quiz-option {
-        font-size: 18px;
-        padding: 8px 4px;
-    }
-}
-
-/* 添加占位内容 */
-.quiz-feedback.hidden::after {
-    content: '✨';
-    opacity: 0;
-}
-
-/* 确保在小屏幕上也能正确居中 */
-@media (max-width: 320px) {
-    .quiz-feedback {
-        max-width: 220px;
-    }
-}
-
-/* 添加分数显示的入场动画 */
-@keyframes slideDown {
-    0% {
-        opacity: 0;
-        transform: translateY(-20px);
-    }
-    100% {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* 为游戏结束界面的元素添加依次滑入效果 */
-.game-over h2 {
-    animation: slideDown 0.5s ease forwards;
-}
-
-.game-over p:nth-child(2) {  /* Score */
-    animation: slideDown 0.5s ease 0.2s forwards;
-    opacity: 0;  /* 初始状态 */
-}
-
-.game-over p:nth-child(3) {  /* Best Score */
-    animation: slideDown 0.5s ease 0.4s forwards;
-    opacity: 0;  /* 初始状态 */
-}
-
-/* 添加新的动画类 */
-.quiz-animate-in {
-    animation: quizSlideIn 0.5s ease forwards;
-}
-
-@keyframes quizSlideIn {
-    0% {
-        opacity: 0;
-        transform: translateY(-20px);
-    }
-    100% {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* 添加装饰性元素 */
-.game-title::before,
-.game-title::after {
-    content: '🌟';
-    position: absolute;
-    font-size: 24px;
-    top: 50%;
-    transform: translateY(-50%);
-    animation: gentleStarTwinkle 2s ease-in-out infinite alternate;  /* 更柔和的闪烁 */
-    opacity: 0.8;  /* 降低初始透明度 */
-}
-
-.game-title::before {
-    left: -40px;
-    animation-delay: 0.5s;
-}
-
-.game-title::after {
-    right: -40px;
-    animation-delay: 1s;
-}
-
-/* 更柔和的标题动画 */
-@keyframes gentleTitleBounce {
-    0%, 100% {
-        transform: scale(1) rotate(-1deg);  /* 减小旋转角度 */
-    }
-    50% {
-        transform: scale(1.03) rotate(1deg);  /* 减小缩放幅度 */
-    }
-}
-
-/* 更柔和的星星动画 */
-@keyframes gentleStarTwinkle {
-    0% {
-        opacity: 0.6;
-        transform: translateY(-50%) scale(0.9) rotate(0deg);
-    }
-    100% {
-        opacity: 0.9;
-        transform: translateY(-50%) scale(1.1) rotate(180deg);  /* 减少旋转角度 */
-    }
-}
-
-/* 点击提示动画 */
-@keyframes tapPulse {
-    0% {
-        transform: scale(1);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    }
-    50% {
-        transform: scale(1.1);
-        box-shadow: 0 6px 12px rgba(0,0,0,0.3);
-    }
-    100% {
-        transform: scale(1);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    }
-}
-
-/* 禁用按钮的点击效果 */
-button {
-    -webkit-tap-highlight-color: transparent;
-    -webkit-touch-callout: none;
-    outline: none !important;
-    user-select: none;
-}
-
-/* 禁用画布的选中效果 */
-canvas {
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-}
-
-/* 确保文本仍然可读但不可选 */
-.game-title,
-.tap-tip,
-.quiz-text,
-.quiz-question,
-.quiz-feedback,
-.game-over h2,
-.game-over p {
-    cursor: default;
-}
-
-/* 优化按钮点击效果 */
-.quiz-option:focus {
-    outline: none;
-}
-
-/* 修改倒计时样式 */
-.countdown {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 120px;
-    color: #FFD700;
-    text-shadow: 
-        4px 4px 0 #FF6B6B,
-        -4px -4px 0 #4EC0CA,
-        0 0 20px rgba(255, 255, 255, 0.8);
-    z-index: 1000;
-    width: 200px;
-    height: 200px;
-    background: rgba(255, 255, 255, 0.15);
-    border-radius: 50%;
-    border: 4px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 
-        0 0 30px rgba(255, 215, 0, 0.3),
-        inset 0 0 20px rgba(255, 255, 255, 0.2);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    opacity: 0;  /* 初始状态设为不可见 */
-    transition: opacity 0.3s ease;  /* 添加过渡效果 */
-}
-
-.countdown.visible {
-    opacity: 1;
-}
-
-.countdown.hidden {
-    display: none;
-}
-
-/* 倒计时数字样式 */
-.countdown span {
-    display: inline-block;
-    /* 防止数字基线对齐导致的偏移 */
-    vertical-align: middle;
-    /* 移除可能的默认边距 */
-    margin: 0;
-    padding: 0;
-}
-
-/* 移动端适配 */
-@media (max-width: 768px) {
     .countdown {
         font-size: 100px;
         width: 180px;
@@ -683,4 +317,72 @@ canvas {
         width: 150px;
         height: 150px;
     }
+}
+
+/* 添加得分显示容器样式 */
+.score-display {
+    position: fixed;
+    top: 50px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2000;  /* 确保在算术题之上 */
+    background: rgba(255, 255, 255, 0.2);
+    padding: 5px 15px;
+    border-radius: 20px;
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    min-width: 80px;
+    text-align: center;
+    pointer-events: none;  /* 防止干扰点击 */
+}
+
+.score-display .score-text {
+    color: white;
+    font-size: 36px;
+    font-weight: bold;
+    text-shadow: 
+        2px 2px 0 rgba(0, 0, 0, 0.3),
+        -2px -2px 0 rgba(0, 0, 0, 0.3);
+    margin: 0;
+    line-height: 1;
+}
+
+/* 修改游戏结束界面的样式 */
+.game-over {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+}
+
+/* 调整游戏结束标题样式 */
+.game-over h2 {
+    font-size: 36px;
+    color: #FF6B6B;
+    text-shadow: 
+        2px 2px 0 #FFF,
+        -2px -2px 0 #FFF,
+        2px -2px 0 #FFF,
+        -2px 2px 0 #FFF;
+    margin-bottom: 20px;
+}
+
+/* 调整分数显示样式 */
+.game-over p {
+    font-size: 22px;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 10px 35px;
+    border-radius: 12px;
+    margin: 10px 0;
+    border: 2px solid #FFD700;
+    color: #4A90E2;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.2);
 } 

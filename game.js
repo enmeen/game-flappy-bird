@@ -92,6 +92,10 @@ class FlappyBird {
         // 添加设备像素比属性
         this.dpr = window.devicePixelRatio || 1;
         
+        // 添加得分显示元素引用
+        this.scoreDisplay = document.querySelector('.score-display');
+        this.scoreDisplayText = document.querySelector('.score-display .score-text');
+        
         // 修改初始化顺序
         this.setupCanvas(); // 先设置画布，获取游戏尺寸
         this.init(true);    // 再初始化游戏状态
@@ -108,21 +112,28 @@ class FlappyBird {
             question: '',
             answer: 0,
             options: [],
-            isProcessing: false,  // 添加状态锁
-            timer: null,          // 添加定时器引用
-            wrongAttempts: 0,     // 记录连续答错次数
-            waitTime: 0,          // 答错后的等待时间
-            cooldownTimer: null,   // 冷却时间定时器
-            correctStreak: 0,    // 添加连续答对计数
-            lastAnswerPosition: -1  // 记录上一次正确答案的位置
+            isProcessing: false,
+            timer: null,
+            wrongAttempts: 0,
+            waitTime: 0,
+            cooldownTimer: null,
+            correctStreak: 0,
+            lastAnswerPosition: -1
         };
         
         // 初始化音频上下文和音效
-        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        this.jumpSound = null;
-        this.gameOverSound = null;  // 添加游戏结束音效
-        this.createJumpSound();
-        this.createGameOverSound();  // 创建游戏结束音效
+        try {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            this.jumpSound = null;
+            this.gameOverSound = null;
+            
+            this.createJumpSound();
+            this.createGameOverSound();
+            this.setupAudioResume();
+        } catch (error) {
+            console.warn('音频初始化失败:', error);
+            this.audioContext = null;
+        }
         
         // 添加倒计时容器到 HTML
         this.createCountdownElement();
@@ -137,7 +148,7 @@ class FlappyBird {
         this.bestScore = parseInt(localStorage.getItem('bestScore')) || 0;
         this.bestScoreElement.textContent = this.bestScore;
         
-        // 小鸟属
+        // 小鸟属性
         this.bird = {
             x: this.gameWidth * 0.2,
             y: this.gameHeight / 2,
@@ -183,6 +194,11 @@ class FlappyBird {
             
             this.startAnimation();
         }
+        
+        // 确保得分显示被隐藏
+        if (this.scoreDisplay) {
+            this.scoreDisplay.classList.add('hidden');
+        }
     }
 
     startAnimation() {
@@ -223,43 +239,61 @@ class FlappyBird {
     setupEventListeners() {
         // 处理点击/触摸事件
         const handleInput = (e) => {
+            // 阻止默认行为
+            e.preventDefault();
+            
             // 如果游戏界面正在阻止点击，则不处理任何点击事件
             if (this.gameOverScreen.classList.contains('blocking')) {
                 return;
             }
             
-            e.preventDefault();
-            
             if (this.gameState === 'start') {
-                this.startGame();
+                this.showStartQuiz();
             } else if (this.gameState === 'playing') {
                 if (this.bird.velocity > -4) {
                     this.bird.velocity = this.bird.jump;
-                    this.playJumpSound();  // 添加音效
+                    this.playJumpSound();
                 }
             }
         };
 
+        // 阻止双击放大
+        const preventZoom = (e) => {
+            e.preventDefault();
+        };
+
         // 给 canvas 添加事件监听
         this.canvas.addEventListener('click', handleInput);
-        this.canvas.addEventListener('touchstart', handleInput);
+        this.canvas.addEventListener('touchstart', handleInput, { passive: false });
+        this.canvas.addEventListener('touchend', preventZoom);
         
         // 给开始界面添加事件监听
         this.startScreen.addEventListener('click', handleInput);
-        this.startScreen.addEventListener('touchstart', handleInput);
+        this.startScreen.addEventListener('touchstart', handleInput, { passive: false });
+        this.startScreen.addEventListener('touchend', preventZoom);
+        
+        // 阻止文档级别的缩放
+        document.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 1) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+        
+        // 阻止双击放大
+        document.addEventListener('dblclick', (e) => {
+            e.preventDefault();
+        });
     }
 
     startGame() {
-        // 先隐藏开始界面
-        this.startScreen.classList.add('hidden');
+        // 显示得分
+        this.scoreDisplay.classList.remove('hidden');
+        this.scoreDisplayText.textContent = '0';
         
-        // 等待一帧确保开始界面已隐藏
-        requestAnimationFrame(() => {
-            // 显示倒计时
-            this.showCountdown().then(() => {
-                this.gameState = 'playing';
-                this.addPipe();
-            });
+        // 显示倒计时
+        this.showCountdown().then(() => {
+            this.gameState = 'playing';
+            this.addPipe();
         });
     }
 
@@ -334,8 +368,8 @@ class FlappyBird {
             if (!pipe.passed && pipe.x + this.pipeWidth < this.bird.x) {
                 pipe.passed = true;
                 this.score++;
-                // 实时更新分数显示
-                this.scoreElement.textContent = this.score;
+                // 更新得分显示
+                this.scoreDisplayText.textContent = this.score;
             }
         });
 
@@ -374,7 +408,7 @@ class FlappyBird {
                               birdLeft < pipe.x + this.pipeWidth &&
                               birdTop < pipe.topHeight;
 
-            // 检查与管道的碰撞
+            // 检查与管道的碰��
             const hitBottomPipe = birdRight > pipe.x && 
                                  birdLeft < pipe.x + this.pipeWidth &&
                                  birdBottom > pipe.topHeight + pipe.gapSize;
@@ -406,7 +440,7 @@ class FlappyBird {
         // 先显示游戏结束界面
         this.gameOverScreen.classList.remove('hidden');
         
-        // 延迟显示算术题
+        // 延迟显示算术题 - 将延迟时间从1000ms改为300ms
         setTimeout(() => {
             this.gameOverScreen.classList.remove('blocking');
             const quizContainer = document.querySelector('.arithmetic-quiz');
@@ -423,10 +457,13 @@ class FlappyBird {
             
             // 生成算术题
             this.generateArithmeticQuiz();
-        }, 1000);
+        }, 300);  // 改为300ms
         
         // 重置连续答对计数
         this.arithmeticQuiz.correctStreak = 0;
+        
+        // 隐藏得分显示
+        this.scoreDisplay.classList.add('hidden');
     }
 
     draw() {
@@ -811,7 +848,14 @@ class FlappyBird {
                 if (this.arithmeticQuiz.correctStreak >= 2) {
                     // 达到2题后，先隐藏界面
                     quizContainer.classList.add('hidden');
-                    this.gameOverScreen.classList.add('hidden');
+                    
+                    // 判断是开始游戏还是重新开始
+                    if (this.gameState === 'start') {
+                        // 隐藏开始界面
+                        this.startScreen.classList.add('hidden');
+                    } else {
+                        this.gameOverScreen.classList.add('hidden');
+                    }
                     
                     // 显示倒计时后再开始游戏
                     this.showCountdown().then(() => {
@@ -918,20 +962,39 @@ class FlappyBird {
     
     // 修改 playJumpSound 方法，添加音量控制
     playJumpSound() {
-        if (this.jumpSound && this.audioContext) {
+        if (!this.audioContext || !this.jumpSound) return;
+        
+        try {
+            // 检查音频上下文状态
+            if (this.audioContext.state === 'suspended') {
+                this.audioContext.resume().then(() => {
+                    this.playJumpSoundImpl();
+                }).catch(error => {
+                    console.warn('音频恢复失败:', error);
+                });
+            } else {
+                this.playJumpSoundImpl();
+            }
+        } catch (error) {
+            console.warn('播放跳跃音效失败:', error);
+        }
+    }
+    
+    // 实际播放跳跃音效的实现
+    playJumpSoundImpl() {
+        try {
             const source = this.audioContext.createBufferSource();
             const gainNode = this.audioContext.createGain();
             
-            // 设置音量
-            gainNode.gain.value = 0.3;  // 降低音量到30%
+            gainNode.gain.value = 0.3;
             
-            // 连接节点
             source.buffer = this.jumpSound;
             source.connect(gainNode);
             gainNode.connect(this.audioContext.destination);
             
-            // 启动音频
-            source.start();
+            source.start(0);
+        } catch (error) {
+            console.warn('播放音效失败:', error);
         }
     }
     
@@ -946,7 +1009,7 @@ class FlappyBird {
             const t = i / audioBuffer.length;
             // 创建一个下降的音调效果
             channelData[i] = (
-                Math.sin(2 * Math.PI * (600 - 300 * t) * t) * 0.5 +  // 主音频���600Hz降至300Hz
+                Math.sin(2 * Math.PI * (600 - 300 * t) * t) * 0.5 +  // 主音频600Hz降至300Hz
                 Math.sin(2 * Math.PI * (400 - 200 * t) * t) * 0.3    // 添加和声
             ) * Math.pow(1 - t, 1.5);  // 平滑的音量衰减
         }
@@ -956,20 +1019,39 @@ class FlappyBird {
     
     // 添加播放游戏结束音效的方法
     playGameOverSound() {
-        if (this.gameOverSound && this.audioContext) {
+        if (!this.audioContext || !this.gameOverSound) return;
+        
+        try {
+            // 检查音频上下文状态
+            if (this.audioContext.state === 'suspended') {
+                this.audioContext.resume().then(() => {
+                    this.playGameOverSoundImpl();
+                }).catch(error => {
+                    console.warn('音频恢复失败:', error);
+                });
+            } else {
+                this.playGameOverSoundImpl();
+            }
+        } catch (error) {
+            console.warn('播放游戏结束音效失败:', error);
+        }
+    }
+    
+    // 实际播放游戏结束音效的实现
+    playGameOverSoundImpl() {
+        try {
             const source = this.audioContext.createBufferSource();
             const gainNode = this.audioContext.createGain();
             
-            // 设置音量
-            gainNode.gain.value = 0.4;  // 设置适中的音量
+            gainNode.gain.value = 0.4;
             
-            // 连接节点
             source.buffer = this.gameOverSound;
             source.connect(gainNode);
             gainNode.connect(this.audioContext.destination);
             
-            // 启动音频
-            source.start();
+            source.start(0);
+        } catch (error) {
+            console.warn('播放音效失败:', error);
         }
     }
 
@@ -1044,6 +1126,40 @@ class FlappyBird {
             // 开始倒计时
             updateCount();
         });
+    }
+
+    // 添加音频状态恢复方法
+    setupAudioResume() {
+        if (!this.audioContext) return;
+        
+        const resumeAudio = () => {
+            if (this.audioContext.state === 'suspended') {
+                this.audioContext.resume().catch(error => {
+                    console.warn('音频恢复失败:', error);
+                });
+            }
+        };
+        
+        // 在各种用户交互时尝试恢复音频
+        document.addEventListener('click', resumeAudio, { once: true });
+        document.addEventListener('touchstart', resumeAudio, { once: true });
+        document.addEventListener('keydown', resumeAudio, { once: true });
+    }
+
+    // 添加新方法显示开始前的算术题
+    showStartQuiz() {
+        // 显示算术题容器
+        const quizContainer = document.querySelector('.arithmetic-quiz');
+        quizContainer.classList.remove('hidden');
+        
+        // 重置连续答对计数
+        this.arithmeticQuiz.correctStreak = 0;
+        
+        // 生成新题目
+        this.generateArithmeticQuiz();
+        
+        // 修改提示文本
+        document.querySelector('.quiz-text').textContent = '开始游戏前请先回答:';
     }
 }
 
